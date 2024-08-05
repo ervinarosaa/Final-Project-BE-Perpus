@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Book;
 use App\Http\Requests\BookRequest;
 use Illuminate\Support\Facades\Storage;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class BookController extends Controller
 {
@@ -45,16 +46,12 @@ class BookController extends Controller
         $data = $request->validated();
 
         // Jika file gambar diinput
-        if ($request->hasFile('image')){
-            // Membuat unique name pada gambar yang diinput
-            $imageName = time().'.'.$request->image->extension();
+        if ($request->hasFile('image')) {
+            // Unggah gambar ke Cloudinary
+            $uploadedFileUrl = Cloudinary::upload($request->file('image')->getRealPath())->getSecurePath();
 
-            // Simpan gambar pada file storage
-            $request->image->storeAs('public/image', $imageName);
-
-            // Mengganti nilai request pada image menjadi $imagerName yang baru
-            $path = env('APP_URL').'/storage/image/';
-            $data['image'] = $path.$imageName;
+            // Mengganti nilai request pada image menjadi URL gambar yang diunggah
+            $data['image'] = $uploadedFileUrl;
         }
 
         Book::create($data);
@@ -97,17 +94,18 @@ class BookController extends Controller
             ], 404);
         }
 
-        if ($request->hasFile('image')){
+        if ($request->hasFile('image')) {
+            // Jika ada gambar lama, hapus dari Cloudinary
             if ($book->image) {
-                $nameImage = basename($book->image);
-                Storage::delete('public/image/' . $nameImage);
+                $publicId = pathinfo($book->image, PATHINFO_FILENAME);
+                Cloudinary::destroy($publicId);
             }
 
-            $imageName = time() . '-image.' . $request->image->extension();
-            $request->image->storeAs('public/image/', $imageName);
+            // Unggah gambar baru ke Cloudinary
+            $uploadedFileUrl = Cloudinary::upload($request->file('image')->getRealPath())->getSecurePath();
 
-            $path = env('APP_URL') . '/storage/image/';
-            $data['image'] = $path . $imageName;
+            // Mengganti nilai request pada image menjadi URL gambar yang diunggah
+            $data['image'] = $uploadedFileUrl;
         }
 
         $book->update($data);
