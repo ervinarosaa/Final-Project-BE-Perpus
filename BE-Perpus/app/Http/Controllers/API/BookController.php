@@ -129,8 +129,9 @@ class BookController extends Controller
         }
 
         if($book->image){
-            $imageName = basename($book->image);
-            Storage::delete('public/image/' . $imageName);
+            // Hapus gambar dari Cloudinary
+            $publicId = pathinfo($book->image, PATHINFO_FILENAME);
+            Cloudinary::destroy($publicId);
         }
 
         $book->delete();
